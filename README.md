@@ -1,42 +1,80 @@
 # Maqiu
-男性飞机助眠法的神经内分泌机制及生理学研究
 
-本仓库收录与睡眠、情绪调节及心理健康相关的研究与实践内容。
+局域网低延迟安卓投屏到 Windows 的完整工程实现，包含 Android Studio 工程与 Windows CMake 工程。实现使用 MediaProjection + MediaCodec 硬编码 H264，并通过 RTP/UDP 在局域网传输，Windows 端使用 FFmpeg 解码并通过 SDL2 实时显示。
 
----
+## English Summary
 
-## 怎么停止期待一个明知不可能的人
+This repository provides a complete LAN low-latency Android-to-Windows casting system. The Android sender captures the screen via MediaProjection, encodes H.264 with MediaCodec, and streams RTP over UDP. The Windows receiver ingests RTP via WinSock, decodes with FFmpeg, and renders with SDL2, with device discovery and one-click connect.
 
-停止对一个"明知不可能的人"的期待，是一个心理重建的过程，不能靠意志力强行压制，而需要从认知、情绪和行为三个层面逐步调整。
+## 目录结构
 
-### 一、接受现实，而非否认
+```
+Maqiu/
+  android/          Android Studio 工程 (Java)
+  windows/          Windows CMake 工程 (receiver.exe)
+```
 
-- **承认不可能**：把"也许有一天……"替换成"我已经知道这不会发生"。反复的幻想是大脑在用期待来缓解痛苦，但它只会延长痛苦。
-- **区分"喜欢这个人"和"执着于一个结果"**：喜欢本身没有错，但执着于一个不可能的结果，是在消耗自己。
+## Android 端（发送端）
 
-### 二、减少神经强化
+### 功能概览
+- MediaProjection 录屏
+- MediaCodec Surface 输入硬编码 H264（Baseline Profile）
+- 90kHz RTP 时间戳体系
+- RTP 封包（支持 FU-A 分片，单包 <= 1400 字节）
+- 带上限的 FrameQueue（丢弃旧帧保证低延迟）
+- BufferPool 复用内存
+- 简单 ABR 自适应码率（基于丢包反馈）
+- UDP 发送节流 pacing
+- UDP 广播设备发现响应
 
-- **减少接触与信息刺激**：每一次偷看对方的动态，都在神经层面重新激活期待回路（多巴胺驱动）。物理和信息上的距离，是让大脑冷静的前提。
-- **打断仪式化的想象**：当脑海中开始浮现"如果……"的剧情，有意识地打断，用具体的当下任务转移注意。
+### 编译与运行
+1. 使用 Android Studio 打开 `android/` 目录。
+2. 连接 Android 设备并运行应用。
+3. 点击 **Grant Screen Capture Permission** 授权录屏。
+4. 点击 **Start Cast Service** 启动前台服务，等待 Windows 端连接。
 
-### 三、重新投资自己的情感资源
+## Windows 端（接收端）
 
-- **把情感能量用在可以成长的地方**：运动、学习、创作、与真正回应你的人建立联系。
-- **允许悲伤存在**：不是"假装不在乎"，而是"承认我在乎，同时选择不再等待"。悲伤是正常的，压抑只会让它反弹。
+### 功能概览
+- UDP 接收（WinSock）
+- RTP 解析（序号、时间戳、Marker 位）
+- Jitter Buffer（乱序重排、滑动窗口、丢包检测）
+- 丢包反馈（LOSS|percent）
+- FFmpeg H264 解码（处理 EAGAIN）
+- 解码线程与渲染线程分离
+- SDL2 实时 YUV 渲染
+- Win32 GUI（刷新设备/连接/停止）
+- 设备发现与响应
 
-### 四、重新定义"值得期待的人"
+### 编译与运行
+1. 安装 FFmpeg 与 SDL2（推荐解压到本地路径）。
+2. 生成工程（示例）：
+   ```
+   cmake -S windows -B windows/build -DFFMPEG_ROOT=C:/ffmpeg -DSDL2_ROOT=C:/SDL2
+   cmake --build windows/build --config Release
+   ```
+3. 运行 `windows/build/Release/receiver.exe`。
+4. 点击 **Refresh** 发现设备，选择设备后点击 **Connect**。
 
-- 过去的执着往往源于某种"稀缺感"——觉得只有这一个人能给自己某种感觉。  
-- 试着问自己：**"我在这个人身上寻找的，究竟是什么？"** 那种感觉——被看见、被接受、被欣赏——本身并不稀缺，只是你还没找到其他的来源。
+## 协议与端口
+- 发现端口：50000（UDP 广播）
+- 控制端口：50001（UDP）
+- RTP 端口：50002（UDP）
+- 丢包反馈端口：50003（UDP）
 
-### 五、给自己时间
+### 关键消息
+- 发现请求：`MAQIU_DISCOVER`
+- 发现响应：`MAQIU_DEVICE|<name>|<rtp_port>|<feedback_port>|<control_port>`
+- 启动命令：`MAQIU_START|<receiver_ip>|<rtp_port>|<feedback_port>`
+- 停止命令：`MAQIU_STOP`
 
-停止期待不是一个瞬间的决定，而是一个反复练习的过程。每一次你选择不去刷对方的页面、不去重演那些对话，都是一次微小的胜利。积累这些胜利，大脑会慢慢重新校准。
+## 关键说明
+- RTP 使用标准 12 字节头，时间戳 90kHz。
+- H264 为 Baseline Profile，无 B 帧，GOP <= 1s，固定 60fps。
+- Android 端 FrameQueue 保持 5~10 帧，Windows 端 Jitter Buffer 至少缓存 3~5 帧。
+- 乱序与丢包可容忍，关键帧丢失后会等待下一个 IDR 恢复。
 
-> "你值得一个真正可能的人。"
-
----
-
-## 势力代码
-
-如果需要一个可执行的行动清单，请参阅 [势力代码](./shili_code.md)。
+## 运行建议
+- 确保 Android 与 Windows 在同一局域网内。
+- Windows 防火墙允许 UDP 端口。
+- 1080p/60fps 建议使用 5GHz Wi-Fi 或有线网络。
