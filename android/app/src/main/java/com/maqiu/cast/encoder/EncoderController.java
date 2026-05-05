@@ -8,6 +8,7 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.projection.MediaProjection;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Surface;
 
 import com.maqiu.cast.Constants;
@@ -110,7 +111,8 @@ public class EncoderController {
                     encoder.releaseOutputBuffer(index, false);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.e("MaqiuEncoder", "Encoder loop failed", e);
         } finally {
             if (abrController != null) {
                 abrController.stop();

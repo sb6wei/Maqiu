@@ -147,7 +147,7 @@ private:
     uint32_t timestamp_ = 0;
     bool hasTimestamp_ = false;
     bool currentKeyframe_ = false;
-    bool needKeyframe_ = false;
+    bool needKeyframe_ = true;
     bool inFragment_ = false;
 };
 
@@ -223,8 +223,8 @@ void Receiver::receiveLoop() {
     uint64_t lastFeedback = nowMs();
     int received = 0;
     int lostCount = 0;
-    bool startedBuffering = false;
-    uint64_t startBufferTime = nowMs();
+    bool hasBufferingStarted = false;
+    uint64_t bufferingStartTimeMs = nowMs();
 
     while (running_) {
         uint8_t buffer[1500];
@@ -256,10 +256,10 @@ void Receiver::receiveLoop() {
         memcpy(packet.payload, buffer + headerLen, packet.payloadLen);
         jitter.push(packet);
 
-        if (!startedBuffering && nowMs() - startBufferTime > 50) {
-            startedBuffering = true;
+        if (!hasBufferingStarted && nowMs() - bufferingStartTimeMs > 50) {
+            hasBufferingStarted = true;
         }
-        if (!startedBuffering) {
+        if (!hasBufferingStarted) {
             continue;
         }
 
@@ -359,6 +359,15 @@ void Receiver::renderLoop() {
     SDL_Texture* texture = nullptr;
     SwsContext* sws = nullptr;
     AVFrame* swsFrame = av_frame_alloc();
+    if (!swsFrame) {
+        running_ = false;
+        SDL_Quit();
+        return;
+    }
+    if (swsFrame) {
+        swsFrame->width = 0;
+        swsFrame->height = 0;
+    }
 
     while (running_) {
         AVFrame* frame = nullptr;

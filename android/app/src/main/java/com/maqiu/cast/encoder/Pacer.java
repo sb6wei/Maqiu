@@ -12,7 +12,7 @@ public class Pacer {
         this.targetKbps = Math.max(1000, kbps);
     }
 
-    public void pace(int bytes) {
+    public synchronized void pace(int bytes) {
         if (bytes <= 0) {
             return;
         }

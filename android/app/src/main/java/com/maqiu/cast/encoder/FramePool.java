@@ -28,7 +28,9 @@ public class FramePool {
         if (frame == null) {
             return;
         }
-        bufferPool.release(frame.data);
+        if (frame.data != null) {
+            bufferPool.release(frame.data);
+        }
         frame.data = null;
         frame.reset();
         pool.offer(frame);

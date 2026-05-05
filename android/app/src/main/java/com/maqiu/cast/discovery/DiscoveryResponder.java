@@ -1,6 +1,7 @@
 package com.maqiu.cast.discovery;
 
 import android.os.Build;
+import android.util.Log;
 
 import com.maqiu.cast.Constants;
 
@@ -29,7 +30,8 @@ public class DiscoveryResponder extends Thread {
                     socket.send(reply);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w("MaqiuDiscovery", "Discovery responder stopped", e);
         }
     }
 

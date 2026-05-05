@@ -1,5 +1,7 @@
 package com.maqiu.cast.discovery;
 
+import android.util.Log;
+
 import com.maqiu.cast.Constants;
 
 import java.net.DatagramPacket;
@@ -41,7 +43,8 @@ public class ControlReceiver extends Thread {
                     listener.onStopStream();
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w("MaqiuControl", "Control receiver stopped", e);
         }
     }
 

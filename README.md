@@ -2,6 +2,10 @@
 
 局域网低延迟安卓投屏到 Windows 的完整工程实现，包含 Android Studio 工程与 Windows CMake 工程。实现使用 MediaProjection + MediaCodec 硬编码 H264，并通过 RTP/UDP 在局域网传输，Windows 端使用 FFmpeg 解码并通过 SDL2 实时显示。
 
+## English Summary
+
+This repository provides a complete LAN low-latency Android-to-Windows casting system. The Android sender captures the screen via MediaProjection, encodes H.264 with MediaCodec, and streams RTP over UDP. The Windows receiver ingests RTP via WinSock, decodes with FFmpeg, and renders with SDL2, with device discovery and one-click connect.
+
 ## 目录结构
 
 ```

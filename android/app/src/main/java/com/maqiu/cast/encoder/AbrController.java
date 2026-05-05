@@ -2,6 +2,7 @@ package com.maqiu.cast.encoder;
 
 import android.media.MediaCodec;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.maqiu.cast.Constants;
 
@@ -55,7 +56,8 @@ public class AbrController {
                     handleLoss(loss);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w("MaqiuAbr", "Feedback listener stopped", e);
         }
     }
 
