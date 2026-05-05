@@ -25,6 +25,9 @@ public class FrameQueue {
         if (queue.isEmpty()) {
             wait(timeoutMs);
         }
+        if (queue.isEmpty()) {
+            return null;
+        }
         return queue.pollFirst();
     }
 

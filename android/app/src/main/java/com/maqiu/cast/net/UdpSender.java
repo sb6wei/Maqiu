@@ -1,5 +1,7 @@
 package com.maqiu.cast.net;
 
+import android.util.Log;
+
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -23,7 +25,8 @@ public class UdpSender {
         try {
             DatagramPacket packet = new DatagramPacket(data, length, address, port);
             socket.send(packet);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.w("MaqiuUdpSender", "UDP send failed", e);
         }
     }
 

@@ -58,15 +58,12 @@ public:
         if (!hasTimestamp_) {
             timestamp_ = packet.timestamp;
             hasTimestamp_ = true;
-        }
-        if (packet.timestamp != timestamp_ && !buffer_.empty()) {
-            onPacketLoss();
-        }
-        if (!hasTimestamp_) {
+        } else if (packet.timestamp != timestamp_) {
+            if (!buffer_.empty()) {
+                onPacketLoss();
+            }
             timestamp_ = packet.timestamp;
             hasTimestamp_ = true;
-        } else if (packet.timestamp != timestamp_) {
-            timestamp_ = packet.timestamp;
         }
 
         if (packet.payloadLen <= 0) {
@@ -305,7 +302,12 @@ void Receiver::decodeLoop() {
         running_ = false;
         return;
     }
-    avcodec_open2(ctx, codec, nullptr);
+    int openRet = avcodec_open2(ctx, codec, nullptr);
+    if (openRet < 0) {
+        avcodec_free_context(&ctx);
+        running_ = false;
+        return;
+    }
     codecCtx_ = ctx;
 
     AVPacket* pkt = av_packet_alloc();
@@ -357,7 +359,6 @@ void Receiver::renderLoop() {
     SDL_Texture* texture = nullptr;
     SwsContext* sws = nullptr;
     AVFrame* swsFrame = av_frame_alloc();
-    uint8_t* swsBuffer = nullptr;
 
     while (running_) {
         AVFrame* frame = nullptr;
@@ -370,7 +371,17 @@ void Receiver::renderLoop() {
         if (!window) {
             window = SDL_CreateWindow("Maqiu Receiver", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                       frame->width, frame->height, SDL_WINDOW_SHOWN);
+            if (!window) {
+                running_ = false;
+                av_frame_free(&frame);
+                break;
+            }
             renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+            if (!renderer) {
+                running_ = false;
+                av_frame_free(&frame);
+                break;
+            }
         }
         if (!texture || frame->width != swsFrame->width || frame->height != swsFrame->height) {
             if (texture) {
@@ -378,21 +389,26 @@ void Receiver::renderLoop() {
             }
             texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_IYUV, SDL_TEXTUREACCESS_STREAMING,
                                         frame->width, frame->height);
-            if (swsBuffer) {
-                av_free(swsBuffer);
+            if (!texture) {
+                running_ = false;
+                av_frame_free(&frame);
+                break;
             }
             swsFrame->format = AV_PIX_FMT_YUV420P;
             swsFrame->width = frame->width;
             swsFrame->height = frame->height;
             int bufferSize = av_image_alloc(swsFrame->data, swsFrame->linesize, frame->width, frame->height,
                                             AV_PIX_FMT_YUV420P, 1);
-            swsBuffer = swsFrame->data[0];
+            if (bufferSize < 0) {
+                running_ = false;
+                av_frame_free(&frame);
+                break;
+            }
             if (sws) {
                 sws_freeContext(sws);
             }
             sws = sws_getContext(frame->width, frame->height, static_cast<AVPixelFormat>(frame->format),
                                  frame->width, frame->height, AV_PIX_FMT_YUV420P, SWS_BILINEAR, nullptr, nullptr, nullptr);
-            (void)bufferSize;
         }
 
         AVFrame* displayFrame = frame;

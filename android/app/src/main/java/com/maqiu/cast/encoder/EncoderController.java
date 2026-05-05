@@ -198,7 +198,7 @@ public class EncoderController {
         MediaFormat format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
         format.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         format.setInteger(MediaFormat.KEY_BIT_RATE, Constants.DEFAULT_BITRATE_KBPS * 1000);
-        format.setInteger(MediaFormat.KEY_FRAME_RATE, 60);
+        format.setInteger(MediaFormat.KEY_FRAME_RATE, Constants.TARGET_FRAME_RATE);
         format.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
         format.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
         format.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel31);

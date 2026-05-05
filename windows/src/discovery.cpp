@@ -99,7 +99,10 @@ void DiscoveryResponder::run() {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(kDiscoveryPort);
     addr.sin_addr.s_addr = INADDR_ANY;
-    bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+    if (bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
+        closesocket(sock);
+        return;
+    }
 
     char buffer[256];
     while (running_) {

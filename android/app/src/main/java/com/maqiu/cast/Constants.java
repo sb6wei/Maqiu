@@ -14,6 +14,7 @@ public final class Constants {
     public static final int DEFAULT_BITRATE_KBPS = 8000;
     public static final int MIN_BITRATE_KBPS = 3000;
     public static final int MAX_BITRATE_KBPS = 12000;
+    public static final int TARGET_FRAME_RATE = 60;
 
     private Constants() {
     }

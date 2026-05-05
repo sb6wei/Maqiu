@@ -42,6 +42,9 @@ public:
             return true;
         }
         uint64_t now = nowMs();
+        if (lastPopMs_ == 0) {
+            lastPopMs_ = now;
+        }
         if (packets_.size() > maxPackets_ || (now - lastPopMs_ > maxDelayMs_ && !packets_.empty())) {
             expectedSeq_++;
             lastPopMs_ = now;
@@ -73,6 +76,6 @@ private:
     size_t maxPackets_ = 256;
     uint16_t expectedSeq_ = 0;
     bool hasExpected_ = false;
-    uint64_t lastPopMs_ = nowMs();
+    uint64_t lastPopMs_ = 0;
     uint64_t maxDelayMs_ = 50;
 };
