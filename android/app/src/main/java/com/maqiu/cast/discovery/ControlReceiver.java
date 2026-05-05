@@ -6,6 +6,7 @@ import com.maqiu.cast.Constants;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketTimeoutException;
 
 public class ControlReceiver extends Thread {
     public interface ControlListener {
@@ -23,10 +24,15 @@ public class ControlReceiver extends Thread {
     @Override
     public void run() {
         try (DatagramSocket socket = new DatagramSocket(Constants.CONTROL_PORT)) {
+            socket.setSoTimeout(500);
             byte[] buffer = new byte[256];
             while (running) {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                socket.receive(packet);
+                try {
+                    socket.receive(packet);
+                } catch (SocketTimeoutException e) {
+                    continue;
+                }
                 String msg = new String(packet.getData(), 0, packet.getLength());
                 if (msg.startsWith("MAQIU_START|")) {
                     String[] parts = msg.split("\\|");

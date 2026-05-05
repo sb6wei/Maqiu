@@ -8,6 +8,7 @@ import com.maqiu.cast.Constants;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketTimeoutException;
 
 public class DiscoveryResponder extends Thread {
     private volatile boolean running = true;
@@ -16,10 +17,15 @@ public class DiscoveryResponder extends Thread {
     public void run() {
         try (DatagramSocket socket = new DatagramSocket(Constants.DISCOVERY_PORT)) {
             socket.setBroadcast(true);
+            socket.setSoTimeout(500);
             byte[] buffer = new byte[256];
             while (running) {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                socket.receive(packet);
+                try {
+                    socket.receive(packet);
+                } catch (SocketTimeoutException e) {
+                    continue;
+                }
                 String msg = new String(packet.getData(), 0, packet.getLength());
                 if ("MAQIU_DISCOVER".equals(msg)) {
                     String response = "MAQIU_DEVICE|" + Build.MODEL + "|" +

@@ -13,6 +13,7 @@ extern "C" {
 #include <SDL.h>
 
 #include <chrono>
+#include <cstring>
 #include <iostream>
 
 namespace {
@@ -171,9 +172,11 @@ bool Receiver::start(const DeviceInfo& device) {
 }
 
 void Receiver::stop() {
-    running_ = false;
+    bool wasRunning = running_.exchange(false);
+    if (wasRunning) {
+        sendStopCommand();
+    }
     decodeQueue_.clear();
-    renderQueue_.clear();
     if (recvThread_.joinable()) {
         recvThread_.join();
     }
@@ -183,6 +186,7 @@ void Receiver::stop() {
     if (renderThread_.joinable()) {
         renderThread_.join();
     }
+    drainRenderQueue();
 }
 
 void Receiver::sendStartCommand() {
@@ -202,6 +206,23 @@ void Receiver::sendStartCommand() {
     closesocket(sock);
 }
 
+void Receiver::sendStopCommand() {
+    if (device_.ip.empty()) {
+        return;
+    }
+    SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock == INVALID_SOCKET) {
+        return;
+    }
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(device_.controlPort);
+    inet_pton(AF_INET, device_.ip.c_str(), &addr.sin_addr);
+    const char* cmd = "MAQIU_STOP";
+    sendto(sock, cmd, static_cast<int>(strlen(cmd)), 0, reinterpret_cast<sockaddr*>(&addr), sizeof(addr));
+    closesocket(sock);
+}
+
 void Receiver::receiveLoop() {
     SOCKET sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == INVALID_SOCKET) {
@@ -212,6 +233,8 @@ void Receiver::receiveLoop() {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(kLocalRtpPort);
     addr.sin_addr.s_addr = INADDR_ANY;
+    DWORD timeoutMs = 200;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeoutMs), sizeof(timeoutMs));
     if (bind(sock, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) != 0) {
         closesocket(sock);
         running_ = false;
@@ -232,6 +255,13 @@ void Receiver::receiveLoop() {
         int fromLen = sizeof(from);
         int len = recvfrom(sock, reinterpret_cast<char*>(buffer), sizeof(buffer), 0,
                            reinterpret_cast<sockaddr*>(&from), &fromLen);
+        if (len == SOCKET_ERROR) {
+            int error = WSAGetLastError();
+            if (error == WSAETIMEDOUT) {
+                continue;
+            }
+            continue;
+        }
         if (len <= 0) {
             continue;
         }
@@ -403,6 +433,9 @@ void Receiver::renderLoop() {
                 av_frame_free(&frame);
                 break;
             }
+            if (swsFrame->data[0]) {
+                av_freep(&swsFrame->data[0]);
+            }
             swsFrame->format = AV_PIX_FMT_YUV420P;
             swsFrame->width = frame->width;
             swsFrame->height = frame->height;
@@ -460,6 +493,15 @@ void Receiver::renderLoop() {
         av_frame_free(&swsFrame);
     }
     SDL_Quit();
+}
+
+void Receiver::drainRenderQueue() {
+    AVFrame* frame = nullptr;
+    while (renderQueue_.pop(frame, 0)) {
+        if (frame) {
+            av_frame_free(&frame);
+        }
+    }
 }
 
 void Receiver::sendLossFeedback(int lossPercent) {

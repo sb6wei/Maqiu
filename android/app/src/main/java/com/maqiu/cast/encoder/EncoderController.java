@@ -74,6 +74,22 @@ public class EncoderController {
         if (senderThread != null) {
             senderThread.interrupt();
         }
+        if (encoderThread != null) {
+            try {
+                encoderThread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            encoderThread = null;
+        }
+        if (senderThread != null) {
+            try {
+                senderThread.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            senderThread = null;
+        }
         frameQueue.clear();
         releaseEncoder();
         if (udpSender != null) {

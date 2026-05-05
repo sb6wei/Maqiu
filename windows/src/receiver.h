@@ -29,7 +29,9 @@ private:
     void decodeLoop();
     void renderLoop();
     void sendStartCommand();
+    void sendStopCommand();
     void sendLossFeedback(int lossPercent);
+    void drainRenderQueue();
 
     DeviceInfo device_;
 
